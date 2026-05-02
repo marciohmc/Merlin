@@ -3,20 +3,24 @@ FROM golang:1.23-bullseye AS builder
 
 WORKDIR /app
 
-# Instalar dependências necessárias para download e extração
+# Instalar dependências necessárias para download e extração (7z é necessário para versões recentes)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
-    unzip \
+    p7zip-full \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
-# Obter a versão mais recente do Merlin Server do GitHub
-RUN LATEST_TAG=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/') && \
-    echo "Downloading Merlin Server version ${LATEST_TAG}..." && \
-    # Baixar especificamente o servidor para Linux x64
-    curl -L -o merlin-server.zip "https://github.com/Ne0nd0g/merlin/releases/download/${LATEST_TAG}/merlin-server-linux-x64.zip" && \
-    unzip merlin-server.zip && \
-    chmod +x merlin-server
+# Obter a versão mais recente e baixar o asset .7z correto para Linux amd64
+RUN LATEST_TAG=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/latest | jq -r .tag_name) && \
+    DOWNLOAD_URL=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/latest | jq -r '.assets[] | select(.name | contains("server-linux-amd64.7z")) | .browser_download_url') && \
+    echo "Downloading Merlin Server ${LATEST_TAG} from ${DOWNLOAD_URL}..." && \
+    curl -L -o merlin-server.7z "$DOWNLOAD_URL" && \
+    7z x merlin-server.7z && \
+    # O binário extraído geralmente vem com nome como merlin-server (tentar localizar se mudar)
+    find . -name "merlin-server*" -type f -exec chmod +x {} + && \
+    # Mover para um nome padrão para facilitar a cópia
+    mv $(find . -name "merlin-server*" -type f | head -n 1) merlin-server
 
 # --- Final Stage ---
 FROM debian:12-slim
