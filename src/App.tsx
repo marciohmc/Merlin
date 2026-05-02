@@ -35,18 +35,23 @@ export default function App() {
           <div className="lg:col-span-1 space-y-6">
             <section className="bg-slate-900 border border-white/5 rounded-2xl p-6 shadow-xl">
               <h2 className="text-sm font-semibold text-slate-400 mb-4 flex items-center gap-2 uppercase tracking-wider">
-                <Server className="w-4 h-4 text-blue-400" /> Configuração do Deploy
+                <Server className="w-4 h-4 text-blue-400" /> Web Service Cloud
               </h2>
               <div className="space-y-4">
-                {setupFiles.map((file) => (
-                  <div key={file.name} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-slate-200">{file.name}</p>
-                      <p className="text-xs text-slate-500">{file.detail}</p>
-                    </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-200">Health Check Sidecar</p>
+                    <p className="text-xs text-slate-500">Python 3 HTTP Server na porta $PORT.</p>
                   </div>
-                ))}
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-200">Merlin Binary</p>
+                    <p className="text-xs text-slate-500">v2.1.4 rodando em foreground.</p>
+                  </div>
+                </div>
               </div>
             </section>
 
