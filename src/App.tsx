@@ -135,12 +135,18 @@ export default function App() {
 
                     <div className="bg-slate-950/50 rounded-xl p-6 border border-white/5">
                       <h4 className="font-bold flex items-center gap-2 mb-4">
-                        <ExternalLink className="w-4 h-4 text-blue-400" /> Rede (Túneis)
+                        <Terminal className="w-4 h-4 text-blue-400" /> Configuração do Listener
                       </h4>
-                      <p className="text-sm text-slate-400 leading-relaxed">
-                        Como Workers no Render não expõem conexões TCP/UDP diretamente à internet pública no plano gratuito, você deve usar um serviço de túnel. 
-                        No seu ambiente de laboratório, você pode rodar o comando <code>./merlin-server</code> e em outra aba do SSH configurar um túnel para redirecionar a porta 443 do container.
-                      </p>
+                      <div className="space-y-4 text-sm text-slate-400">
+                        <p>Como o Render usa um proxy reverso para terminação TLS (HTTPS), seu listener dentro do Merlin deve ser configurado para tratar tráfego HTTP/1.1 ou HTTP/2 descriptografado que chega na porta interna:</p>
+                        <div className="bg-slate-950 p-3 rounded font-mono text-xs text-blue-300">
+                          # Comandos no console do Merlin:<br/>
+                          listener http3 start --interface 0.0.0.0 --port 443<br/>
+                          # Ou HTTP padrão (mais comum para proxies):<br/>
+                          listener http start --interface 0.0.0.0 --port 80
+                        </div>
+                        <p className="text-xs italic">Dica: Os agentes devem apontar para sua-app.onrender.com na porta 443 (HTTPS).</p>
+                      </div>
                     </div>
                   </div>
                 )}

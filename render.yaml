@@ -22,7 +22,6 @@ services:
     #     mountPath: /opt/merlin/data
     #     sizeGB: 1
 
-# Explicação do Uso de Background Worker:
-# O Merlin C2 mantém conexões persistentes (Keep-Alive). No plano 'Web Service', 
-# o Render encerraria o processo se não houvesse tráfego HTTP/S válido 
-# na porta esperada em menos de 30-60 segundos. O 'Worker' ignora o health check web.
+# Explicação da Estratégia de Web Service:
+# Utilizamos um sidecar em Python (healthcheck.py) para responder ao Health Check do Render
+# na porta $PORT, permitindo que o Merlin C2 rode em foreground sem ser reiniciado.

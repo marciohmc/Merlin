@@ -1,16 +1,20 @@
 # --- Build Stage ---
 FROM golang:1.23-bullseye AS builder
 WORKDIR /app
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates p7zip-full jq && \
     rm -rf /var/lib/apt/lists/*
 
-# Busca dinâmica do asset correto para v2.1.4 para evitar 404
-RUN echo "LOG: Buscando assets para Merlin v2.1.4..." && \
-    ASSET_URL=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/tags/v2.1.4 | jq -r '.assets[] | select(.name | contains("server") and contains("linux") and (contains("amd64") or contains("x64"))) | .browser_download_url' | head -n 1) && \
+# Versão estável alvo
+ENV MERLIN_VERSION="v2.1.4"
+
+# Busca dinâmica do asset correto para v2.1.4
+RUN echo "LOG: Buscando assets para Merlin ${MERLIN_VERSION}..." && \
+    ASSET_URL=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/tags/${MERLIN_VERSION} | jq -r '.assets[] | select(.name | contains("server") and contains("linux") and (contains("amd64") or contains("x64"))) | .browser_download_url' | head -n 1) && \
     if [ -z "$ASSET_URL" ] || [ "$ASSET_URL" = "null" ]; then \
-        echo "ERRO: Nao foi possivel encontrar o asset do servidor para Linux."; \
-        exit 1; \
+        echo "ERRO: Nao foi possivel encontrar o asset via API. Tentando URL direta previsivel..."; \
+        ASSET_URL="https://github.com/Ne0nd0g/merlin/releases/download/${MERLIN_VERSION}/merlin-server-linux-x64.7z"; \
     fi && \
     echo "LOG: Baixando de $ASSET_URL" && \
     curl -L -o merlin.7z "$ASSET_URL" && \
@@ -25,7 +29,7 @@ RUN echo "LOG: Buscando assets para Merlin v2.1.4..." && \
 FROM debian:12-slim
 WORKDIR /opt/merlin
 
-# Instalar dependências mínimas e Python para o sidecar
+# Instalar dependências básicas e Python para o sidecar
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     python3 \
@@ -33,14 +37,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Copiar do builder
 COPY --from=builder /app/merlin-server .
 COPY healthcheck.py .
 
 # Otimização de Memória Go
 ENV GOGC=50
 
-# Expor portas (Render mapeia a porta interna PORT para 80/443 externa)
+# O Render exige que o processo principal respeite a porta definida em $PORT.
+# Nossa estratégia aqui é rodar o healthcheck.py em background para satisfazer o Render,
+# enquanto o Merlin roda como o motor real.
 EXPOSE 443 80 8888
 
-# Inicia o Health Check em background e o Merlin em foreground
+# Inicia o Health Check e o Merlin
 CMD python3 healthcheck.py & ./merlin-server
