@@ -11,22 +11,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     && rm -rf /var/lib/apt/lists/*
 
-# Obter a versão mais recente e baixar o asset .7z correto para Linux amd64
-RUN LATEST_JSON=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/latest) && \
-    echo "LOG: Consultando versao via GitHub API..." && \
-    LATEST_TAG=$(echo "$LATEST_JSON" | jq -r '.tag_name // "v2.1.4"') && \
-    DOWNLOAD_URL=$(echo "$LATEST_JSON" | jq -r '.assets[]? | select(.name | contains("server-linux-amd64.7z")) | .browser_download_url' | head -n 1) && \
-    if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then \
-        echo "LOG: Usando fallback de URL direto..."; \
-        DOWNLOAD_URL="https://github.com/Ne0nd0g/merlin/releases/download/v2.1.4/merlin-server-linux-amd64.7z"; \
-    fi && \
-    echo "LOG: Versao=$LATEST_TAG | URL=$DOWNLOAD_URL" && \
+# Obter a versão estável v2.1.4 e baixar o asset .7z para Linux amd64
+# Nota: Fixamos a versão para evitar erros de Rate Limit da API do GitHub durante o build
+RUN LATEST_TAG="v2.1.4" && \
+    DOWNLOAD_URL="https://github.com/Ne0nd0g/merlin/releases/download/${LATEST_TAG}/merlin-server-linux-amd64.7z" && \
+    echo "LOG: Baixando Merlin Server ${LATEST_TAG}..." && \
     curl -L -o merlin-server.7z "$DOWNLOAD_URL" && \
-    echo "LOG: Extraindo binario (password: merlin)..." && \
-    7z x merlin-server.7z -pmerlin && \
+    echo "LOG: Extraindo binario..." && \
+    # Tentamos extrair. Se houver senha 'merlin', ele usa; se não, extrai normalmente.
+    7z x merlin-server.7z -pmerlin -y || 7z x merlin-server.7z -y && \
     echo "LOG: Organizando binario..." && \
-    TARGET_BIN=$(find . -maxdepth 2 -type f -name "merlin-server*" ! -name "*.7z" | head -n 1) && \
-    if [ -z "$TARGET_BIN" ]; then echo "ERRO: Binario nao encontrado!"; exit 1; fi && \
+    # Busca recursiva pelo binário (geralmente dentro de uma subpasta após extrair)
+    TARGET_BIN=$(find . -type f -name "merlin-server*" ! -name "*.7z" | head -n 1) && \
+    if [ -z "$TARGET_BIN" ]; then echo "ERRO: Binario nao encontrado!"; ls -R; exit 1; fi && \
     chmod +x "$TARGET_BIN" && \
     mv "$TARGET_BIN" merlin-server && \
     echo "LOG: Binario pronto: $(ls -l merlin-server)"
