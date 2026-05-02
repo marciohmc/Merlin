@@ -1,0 +1,6 @@
+{
+  "name": "Merlin C2 Lab Env",
+  "description": "Ambiente otimizado para deploy do Merlin C2 no Render.com como Background Worker, incluindo Dockerfile e persistência.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

@@ -1,0 +1,32 @@
+# Render.com Blueprint para Merlin C2
+# Este arquivo automatiza o deploy como Background Worker
+services:
+  - type: worker
+    name: merlin-c2-server
+    env: docker
+    region: ohio # Altere para a região de sua preferência
+    plan: free # Use o plano gratuito (512MB RAM)
+    
+    # Background Workers não têm URL pública direta para portas TCP arbitrárias.
+    # No Render Free, você precisará usar um Tunnel (como Ngrok ou Cloudflare) 
+    # rodando dentro do container para que os agentes consigam se conectar.
+    
+    envVars:
+      - key: GOGC
+        value: 50
+      - key: MERLIN_LOG_LEVEL
+        value: info # Reduz verbosidade para economizar I/O e log storage
+    
+    # Configuração de Persistência (Opcional - Requer plano pago no Render)
+    # Se quiser manter os dados entre reboots, descomente as linhas abaixo.
+    # Nota: Render Disks custam aprox. $7/mês por 1GB.
+    
+    # disks:
+    #   - name: merlin-data
+    #     mountPath: /opt/merlin/data
+    #     sizeGB: 1
+
+# Explicação do Uso de Background Worker:
+# O Merlin C2 mantém conexões persistentes (Keep-Alive). No plano 'Web Service', 
+# o Render encerraria o processo se não houvesse tráfego HTTP/S válido 
+# na porta esperada em menos de 30-60 segundos. O 'Worker' ignora o health check web.
