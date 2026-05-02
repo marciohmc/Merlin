@@ -12,14 +12,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Obter a versão mais recente e baixar o asset .7z correto para Linux amd64
-RUN LATEST_TAG=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/latest | jq -r .tag_name) && \
-    DOWNLOAD_URL=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/latest | jq -r '.assets[] | select(.name | contains("server-linux-amd64.7z")) | .browser_download_url') && \
-    echo "Downloading Merlin Server ${LATEST_TAG} from ${DOWNLOAD_URL}..." && \
+RUN LATEST_JSON=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/latest) && \
+    LATEST_TAG=$(echo "$LATEST_JSON" | jq -r .tag_name // "v2.1.4") && \
+    DOWNLOAD_URL=$(echo "$LATEST_JSON" | jq -r '.assets[]? | select(.name | contains("server-linux-amd64.7z")) | .browser_download_url' | head -n 1) && \
+    if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then \
+        echo "Erro ao obter URL via API. Usando fallback direto para v2.1.4..."; \
+        DOWNLOAD_URL="https://github.com/Ne0nd0g/merlin/releases/download/v2.1.4/merlin-server-linux-amd64.7z"; \
+    fi && \
+    echo "Downloading Merlin Server ${LATEST_TAG}..." && \
     curl -L -o merlin-server.7z "$DOWNLOAD_URL" && \
-    7z x merlin-server.7z && \
-    # O binário extraído geralmente vem com nome como merlin-server (tentar localizar se mudar)
+    # Merlin usa a senha 'merlin' para seus arquivos 7z
+    7z x merlin-server.7z -pmerlin && \
     find . -name "merlin-server*" -type f -exec chmod +x {} + && \
-    # Mover para um nome padrão para facilitar a cópia
     mv $(find . -name "merlin-server*" -type f | head -n 1) merlin-server
 
 # --- Final Stage ---
