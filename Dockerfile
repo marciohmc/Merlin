@@ -13,18 +13,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Obter a versão mais recente e baixar o asset .7z correto para Linux amd64
 RUN LATEST_JSON=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/latest) && \
-    LATEST_TAG=$(echo "$LATEST_JSON" | jq -r .tag_name // "v2.1.4") && \
+    echo "LOG: Consultando versao via GitHub API..." && \
+    LATEST_TAG=$(echo "$LATEST_JSON" | jq -r '.tag_name // "v2.1.4"') && \
     DOWNLOAD_URL=$(echo "$LATEST_JSON" | jq -r '.assets[]? | select(.name | contains("server-linux-amd64.7z")) | .browser_download_url' | head -n 1) && \
     if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then \
-        echo "Erro ao obter URL via API. Usando fallback direto para v2.1.4..."; \
+        echo "LOG: Usando fallback de URL direto..."; \
         DOWNLOAD_URL="https://github.com/Ne0nd0g/merlin/releases/download/v2.1.4/merlin-server-linux-amd64.7z"; \
     fi && \
-    echo "Downloading Merlin Server ${LATEST_TAG}..." && \
+    echo "LOG: Versao=$LATEST_TAG | URL=$DOWNLOAD_URL" && \
     curl -L -o merlin-server.7z "$DOWNLOAD_URL" && \
-    # Merlin usa a senha 'merlin' para seus arquivos 7z
+    echo "LOG: Extraindo binario (password: merlin)..." && \
     7z x merlin-server.7z -pmerlin && \
-    find . -name "merlin-server*" -type f -exec chmod +x {} + && \
-    mv $(find . -name "merlin-server*" -type f | head -n 1) merlin-server
+    echo "LOG: Organizando binario..." && \
+    TARGET_BIN=$(find . -maxdepth 2 -type f -name "merlin-server*" ! -name "*.7z" | head -n 1) && \
+    if [ -z "$TARGET_BIN" ]; then echo "ERRO: Binario nao encontrado!"; exit 1; fi && \
+    chmod +x "$TARGET_BIN" && \
+    mv "$TARGET_BIN" merlin-server && \
+    echo "LOG: Binario pronto: $(ls -l merlin-server)"
 
 # --- Final Stage ---
 FROM debian:12-slim
