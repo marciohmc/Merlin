@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV MERLIN_VERSION="v2.1.4"
 
 # Busca dinâmica do asset correto para v2.1.4
-RUN set -x; \
+RUN set -xe; \
     echo "LOG: Buscando assets para Merlin ${MERLIN_VERSION}..." && \
     # 1. Busca URL via API
     RAW_JSON=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/tags/${MERLIN_VERSION}) && \
