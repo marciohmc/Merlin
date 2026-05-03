@@ -38,7 +38,8 @@ RUN set -x; \
     fi && \
     mv "$TARGET_BIN" merlin-server && \
     chmod +x merlin-server && \
-    rm merlin.7z
+    rm merlin.7z && \
+    echo "LOG: Instalação do Merlin ${MERLIN_VERSION} concluída com sucesso."
 
 # --- Final Stage ---
 FROM debian:12-slim
