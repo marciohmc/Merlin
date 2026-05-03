@@ -2,44 +2,39 @@
 FROM golang:1.23-bullseye AS builder
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates p7zip-full jq && \
-    rm -rf /var/lib/apt/lists/*
-
 # Versão estável alvo
 ENV MERLIN_VERSION="v2.1.4"
 
-# Busca dinâmica do asset correto para v2.1.4
 RUN set -xe; \
-    echo "LOG: Buscando assets para Merlin ${MERLIN_VERSION}..." && \
-    # 1. Busca URL via API
+    # 1. Garante que as ferramentas existam
+    apt-get update && apt-get install -y --no-install-recommends \
+    curl jq p7zip-full ca-certificates findutils && \
+    \
+    echo "LOG: Buscando Merlin ${MERLIN_VERSION}..." && \
     RAW_JSON=$(curl -s https://api.github.com/repos/Ne0nd0g/merlin/releases/tags/${MERLIN_VERSION}) && \
     ASSET_URL=$(echo "$RAW_JSON" | jq -r '.assets[] | select(.name | contains("server") and contains("linux") and (contains("amd64") or contains("x64"))) | .browser_download_url' | head -n 1) && \
     \
-    # 2. Fallback se a API falhar ou der rate limit
     if [ -z "$ASSET_URL" ] || [ "$ASSET_URL" = "null" ]; then \
-        echo "LOG: Asset nao encontrado via API. Tentando URL direta..."; \
+        echo "LOG: Usando URL estática como fallback..."; \
         ASSET_URL="https://github.com/Ne0nd0g/merlin/releases/download/${MERLIN_VERSION}/merlin-server-linux-x64.7z"; \
-    fi && \
+    fi; \
     \
-    # 3. Download com falha explicita (-f para erro 404)
-    echo "LOG: Baixando de $ASSET_URL" && \
-    curl -L -f -o merlin.7z "$ASSET_URL" || { echo "ERRO: Falha no download (404 ou Rede)"; exit 1; } && \
+    curl -L -f -o merlin.7z "$ASSET_URL" && \
     \
-    # 4. Extracao com verificacao de erro
-    echo "LOG: Extraindo binario..." && \
-    7z x merlin.7z -pmerlin -y || { echo "ERRO: Falha na extracao (Senha incorreta ou arquivo corrompido)"; exit 1; } && \
+    echo "LOG: Extraindo..." && \
+    7z x merlin.7z -pmerlin -y && \
     \
-    # 5. Localizacao e limpeza
-    TARGET_BIN=$(find . -type f -name "merlin-server*" ! -name "*.7z" | head -n 1) && \
+    # Busca o binário em qualquer subdiretório e move para a raiz atual
+    TARGET_BIN=$(find . -executable -type f -name "merlin-server*" ! -name "*.7z" | head -n 1) && \
     if [ -z "$TARGET_BIN" ]; then \
-        echo "ERRO: Binario nao encontrado apos extracao!"; \
+        echo "ERRO: Binário não encontrado. Conteúdo do diretório:"; \
         ls -R; exit 1; \
-    fi && \
-    mv "$TARGET_BIN" merlin-server && \
-    chmod +x merlin-server && \
+    fi; \
+    \
+    mv "$TARGET_BIN" ./merlin-server && \
+    chmod +x ./merlin-server && \
     rm merlin.7z && \
-    echo "LOG: Instalação do Merlin ${MERLIN_VERSION} concluída com sucesso."
+    echo "LOG: Sucesso na instalação do Merlin ${MERLIN_VERSION}!"
 
 # --- Final Stage ---
 FROM debian:12-slim
